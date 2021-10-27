@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright(c) 2021 Intel Corporation
+
+
+FROM registry.access.redhat.com/ubi8/ubi
+
+ARG DPDK_TAG=main
+ENV DPDK_TAG=${DPDK_TAG}
+
+RUN yum -y install gcc-c++-8.4.1 \
+    git-2.27.0 \
+    libtool-2.4.6 \
+    make-1:4.2.1 \
+    python36-devel-3.6.8 \
+        && pip3 install  --no-cache-dir meson==0.57.1 cython==0.29.22 \
+	grpcio-tools==1.36.1 grpcio-reflection==1.36.1 pyyaml==5.4.1 pyelftools==0.27 \
+        && yum clean all
+
+WORKDIR /tmp/
+RUN git clone --progress http://dpdk.org/git/dpdk /tmp/dpdk
+RUN git clone --progress https://github.com/ninja-build/ninja /opt/ninja
+RUN git clone --progress https://github.com/numactl/numactl.git /opt/numactl
+
+WORKDIR /opt/ninja
+RUN python3 configure.py --bootstrap && cp ninja /usr/bin/
+
+WORKDIR /opt/numactl
+RUN ./autogen.sh
+RUN ./configure --disable-dependency-tracking
+RUN make && make install
+
+WORKDIR /tmp/dpdk
+RUN git checkout ${DPDK_TAG}
+
+RUN meson /tmp/dpdk/dpdk-build \
+    -Ddisable_drivers=event,net/tap,net/af_packet,net/atlantic,net/bnx2x,net/cxgbe,net/dpaa2,\
+net/enetc,net/fm10k,net/i40e,net/ixgbe,net/igc,net/memif,net/mlx5,net/netvsc,net/null,\
+net/pcap,net/ring,net/vdev_netvsc,net/vmxnet3,net/af_xdp,net/avp,net/bnxt,net/dcf_grpc,\
+net/e1000,net/enic,net/hinic,net/ionic,net/kni,net/mvneta,net/nfp,net/nfb,net/octeontx,\
+net/pfe,net/sfc,net/tap,net/vhost,net/ark,net/axgbe,net/bondong,net/dpaa,net/ena,net/failsafe,\
+net/hns3,net/ipn3ke,net/liquidio,net/mlx4,net/mvpp2,net/octeontx2,net/qede,net/softnic,net/thunderx,net/virtio \
+    -Ddefault_library=shared \
+    -Dmachine=default \
+    -Dper_library_versions=false \
+	&& DESTDIR=`pwd`/install ninja -C /tmp/dpdk/dpdk-build install \
+        && ldconfig
+
+WORKDIR /
+COPY ./ /opt/dcf
+
+WORKDIR /opt/dcf/lib
+RUN python3 setup.py build_ext --inplace --dpdkinc=/tmp/dpdk/install/usr/local/include --dpdklib=/tmp/dpdk/install/usr/local/lib64
+
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+
+ARG UFT_INSTALL_PATH=/usr/local/lib64
+ENV LD_LIBRARY_PATH=${UFT_INSTALL_PATH}:
+
+COPY --from=0 /tmp/dpdk/install/usr/local/lib64 ${UFT_INSTALL_PATH}
+COPY --from=0 /opt/dcf /opt/dcf
+COPY --from=0 /usr/local/lib/libnuma.so.1 ${UFT_INSTALL_PATH}
+
+RUN microdnf install python36-3.6.8 gcc-c++-8.4.1 \
+	&& python3 -m pip install --upgrade --force pip \
+	&& pip3 install --no-cache-dir grpcio-tools==1.36.1 grpcio-reflection==1.36.1 pyyaml==5.4.1 \
+	&& microdnf update libxml2-2.9.7-9.el8_4.2 lz4-libs-1.8.3-3.el8_4 rpm-4.14.3-14.el8_4 systemd-libs-239-45.el8_4.3 \
+	glib2-2.56.4-10.el8_4.1
+
+WORKDIR /opt/dcf/rpc
+RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. flow.proto
+
+WORKDIR /opt/dcf
+COPY ./images/entrypoint.sh /
+
+ENTRYPOINT ["/entrypoint.sh"]
