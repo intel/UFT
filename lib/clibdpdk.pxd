@@ -14,6 +14,7 @@
 
 cimport cython
 from libc.stdint cimport uint32_t, int32_t, int64_t, uint8_t, uint16_t, uint64_t
+from libc.errno cimport EAGAIN
 
 DEF RTE_ETHER_ADDR_LEN = 6
 
@@ -421,8 +422,6 @@ cdef extern from "rte_flow.h" nogil:
         uint16_t index
 
     struct rte_flow_action_count:
-        uint32_t shared
-        uint32_t reserved
         uint32_t id
 
     struct rte_flow_query_count:
@@ -635,6 +634,8 @@ cdef extern from "rte_flow.h" nogil:
 cdef extern from "rte_ethdev.h":
     uint64_t rte_eth_find_next_owned_by(uint16_t port_id, \
                 const uint64_t owner_id)
+cdef extern from "rte_errno.h":
+    int per_lcore__rte_errno
 
 
 

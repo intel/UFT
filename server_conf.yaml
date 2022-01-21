@@ -19,14 +19,11 @@
 # cert_certificate: the certificate for the server
 server :
     server_port : 50051
-    ld_lib : "/root/home/dpdk-dcf/x86_64-native-linuxapp-gcc/"
-    cert_key: "/root/dcf-tool/my_certs/server.key"
-    cert_certificate: "/root/dcf-tool/my_certs/server.pem"
+    ld_lib : "/usr/local/lib/x86_64-linux-gnu"
+    cert_key: "/home/yiding/uft/ca/server.key"
+    cert_certificate: "/home/yiding/uft/ca/server.pem"
 
 ports_info :
-          - pci  : "0000:86:00.1"
-            intf : enp25s11
-            mode : kernel
-          - pci  : "0000:18:11.0"
+          - pci  : "0000:4b:01.0"
             intf : enp24s17
             mode : dcf

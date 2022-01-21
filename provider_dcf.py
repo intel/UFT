@@ -182,8 +182,9 @@ def Query(request, context):
     data = pb.rte_flow_query_count()
     port_id = request.port_id
     flow_id = request.flow_id
+    action = request.action
     try:
-        ret = dpdk.rte_flow_query(port_id, flow_id)
+        ret = dpdk.rte_flow_query(port_id, flow_id,action)
         data.reset = ret.reset
         data.hits_set = ret.hits_set
         data.bytes_set = ret.bytes_set

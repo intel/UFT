@@ -17,7 +17,7 @@ from libc.stdlib cimport malloc, free
 from libc.string cimport memset, strlen, memcpy
 from libc.stdint cimport uint32_t, int32_t, int64_t, uint8_t, uint16_t, uint64_t
 from ctypes import *
-
+import time
 cimport clibdpdk
 import comm_struct
 from comm_struct import *
@@ -25,6 +25,10 @@ from comm_struct import *
 # macro definition
 DEF RTE_MAX_ETHPORTS        = 32
 DEF RTE_ETH_DEV_NO_OWNER    = 0
+
+# in milliseconds
+DEF RTE_RETRY_INTERVAL      = 200
+DEF RTE_RETRY_COUNT         = 1
 
 # init
 def rte_eal_init(args):
@@ -91,8 +95,12 @@ def rte_flow_create(port_id, attr, patterns, actions):
     c_patterns = <clibdpdk.rte_flow_item*>py2c_convert(patterns, mapping)
     c_actions = <clibdpdk.rte_flow_action*>py2c_convert(actions, mapping)
 
-    memset(&c_error, 0x22, sizeof(c_error))
-    c_rte_flow = clibdpdk.rte_flow_create(port_id, c_attr, c_patterns, c_actions, &c_error)
+    for i in flow_controllor.get_retry():
+        memset(&c_error, 0x22, sizeof(c_error))
+        c_rte_flow = clibdpdk.rte_flow_create(port_id, c_attr, c_patterns, c_actions, &c_error)
+        if not (c_rte_flow is NULL and flow_controllor.can_retry()):
+            break
+
     if c_rte_flow is NULL:
         raise Exception(c_error.message)
 
@@ -158,8 +166,11 @@ def rte_flow_destroy(port_id, flow_id):
         print("Except: {}".format(e))
         raise e
 
+    for i in flow_controllor.get_retry():
+        c_ret = clibdpdk.rte_flow_destroy(port_id, c_rte_flow, &c_error)
+        if c_ret == 0 or not flow_controllor.can_retry():
+            break
 
-    c_ret = clibdpdk.rte_flow_destroy(port_id, c_rte_flow, &c_error)
     if c_ret != 0:
         raise Exception("Destroy port %d rule %d fail: %s!" %(port_id, flow_id, c_error.message))
 
@@ -205,8 +216,12 @@ def rte_flow_flush(port_id):
 
     if flow_pool.is_empty() == True:
         return 0
+    
+    for i in flow_controllor.get_retry():
+        c_ret = clibdpdk.rte_flow_flush(port_id, &c_error)
+        if c_ret == 0 or not flow_controllor.can_retry():
+            break
 
-    c_ret = clibdpdk.rte_flow_flush(port_id, &c_error)
     if c_ret != 0:
         raise Exception("Destroy port %d all rule fail: %s!" %(port_id, c_error.message))
 
@@ -214,7 +229,9 @@ def rte_flow_flush(port_id):
     for flow_id in range(flow_cnt):
         flow_pool.remove_flow(port_id, flow_id)
         print("Flow rule port %d #%d destroyed" %(port_id, flow_id))
-
+    
+    flow_pool.reset_flows(port_id)
+    
     return 0
 
 def rte_flow_isolate(port_id, set):
@@ -598,8 +615,6 @@ cdef class Py2CFlowActionCountConvertor(Py2CConvertor):
         else:
             c_count = <clibdpdk.rte_flow_action_count *>reserved
 
-        c_count.shared = pyObj.shared
-        c_count.reserved = pyObj.reserved
         c_count.id = pyObj.id
 
         print("Action count: ", c_count[0])
@@ -716,6 +731,10 @@ class FlowPool:
             raise Exception("Port is not existing.")
 
         return self.__pool[port_id]
+    # reset flow index after flow_flush
+    def reset_flows(self,port_id):
+        if port_id in self.__pool:
+            self.__pool[port_id] = []
 
     def get_flow(self, port_id, flow_idx):
         if port_id not in self.__pool:
@@ -751,6 +770,28 @@ class FlowPool:
         return False
 
 flow_pool = FlowPool()
+
+class FlowControllor:
+    def __init__(self,interval,retry):
+        self.__interval = interval
+        self.__retry = retry
+        self.__failures = 0
+        self.__fail_busy = 0
+
+    def can_retry(self):
+        self.__failures += 1
+        res = (clibdpdk.per_lcore__rte_errno == clibdpdk.EAGAIN)
+        clibdpdk.per_lcore__rte_errno = 0
+        if res:
+            self.__fail_busy += 1
+            time.sleep(self.__interval / 1000)
+            print('fails %d times fail_busy = %d' % (self.__failures,self.__fail_busy))
+        return res
+
+    def get_retry(self):
+         return range(0,self.__retry + 1)
+
+flow_controllor = FlowControllor(RTE_RETRY_INTERVAL,RTE_RETRY_COUNT)
 
 cdef char *flow_to_string(clibdpdk.rte_flow_attr *c_attr,  \
                         clibdpdk.rte_flow_item *c_patterns,     \

@@ -893,8 +893,6 @@ message rte_flow_action_queue {
 
 
 message rte_flow_action_count {
-	uint32 shared = 1; /**< Share counter ID with other flow rules. */
-	uint32 reserved = 2; /**< Reserved, must be zero. */
 	uint32 id = 3; /**< Counter ID. */
 }
 

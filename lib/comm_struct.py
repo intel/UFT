@@ -444,8 +444,8 @@ rte_flow_action_queue = collections.namedtuple('rte_flow_action_queue', ['index'
 rte_flow_action_queue.__new__.__defaults__ = (0,)
 
 # RTE_FLOW_ACTION_TYPE_COUNT
-rte_flow_action_count = collections.namedtuple('rte_flow_action_count', ['shared', 'reserved', 'id'])
-rte_flow_action_count.__new__.__defaults__ = (0, 0, 0)
+rte_flow_action_count = collections.namedtuple('rte_flow_action_count', ['id'])
+rte_flow_action_count.__new__.__defaults__ = (0)
 
 # RTE_FLOW_ACTION_TYPE_COUNT (query)
 rte_flow_query_count = collections.namedtuple('rte_flow_query_count', ['reset', 'hits_set', 'bytes_set', 'reserved',

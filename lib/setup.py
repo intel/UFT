@@ -21,7 +21,7 @@ libs = [
     ':librte_eal.so',
     ':librte_ethdev.so'
 ]
-lib_dirs = ['/usr/local/lib']
+lib_dirs = ['/usr/local/lib/x86_64-linux-gnu']
 inc_dirs = ['/usr/local/include']
 
 parser = argparse.ArgumentParser(add_help = False)
