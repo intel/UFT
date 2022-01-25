@@ -17,7 +17,7 @@
 # given in Environment varible exported by device plugin in following
 # format: PCIDEVICE_INTEL_COM_INTEL_ENP24S0F0=0000:18:02.2
 ####
-rawpci=$(env | grep PCIDEVICE_INTEL_COM | awk -F'=' '{ print $2 }')
+rawpci=$(env | grep PCIDEVICE_ | awk -F'=' '{ print $2 }')
 pciids=(${rawpci//,/ })
 
 SERVER_CONF_FILE=/opt/dcf/server_conf.yaml
