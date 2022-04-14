@@ -19,6 +19,8 @@ sys.path.append("./lib")
 import grpc
 from flow_pb2 import *
 from flow_pb2_grpc import FlowServiceStub
+from qos_pb2 import *
+from qos_pb2_grpc import QosServiceStub
 import sys
 
 connect_port = 50051
@@ -145,15 +147,69 @@ def test_list_ports():
     resp = stub.ListPorts(req)
     print(resp)
 
+
+###QoS####
+
+def test_add_sched_tree(port_id, profile_id, tc_num, vf_num):
+    req = RequestAdd_TM_Node()
+    req.port_id = port_id
+    req.profile_id = profile_id
+    req.tc_num = tc_num
+    req.vf_num = vf_num
+
+    resp = qos_stub.Add_TM_Node(req)
+    print(resp)
+
+def test_set_node_bw(port_id, committed_bw, peak_bw):
+    req = RequestSet_Node_BW()
+    req.port_id = port_id
+    req.committed_bw = committed_bw
+    req.peak_bw = peak_bw
+
+    resp = qos_stub.Set_Node_BW(req)
+    print(resp)
+
+def test_get_node_bw(port_id):
+    req = RequestGet_Node_BW()
+    req.port_id = port_id
+
+    resp = qos_stub.Get_Node_BW(req)
+    print(resp)
+
+
 if __name__ == '__main__':
 
     if len(sys.argv) <= 1:
-        raise Exception('please input you action: create, list, destroy, query, flush, validate, listports')
+        raise Exception('please input you action: create, list, destroy,'
+                        ' query, flush, validate, listports,'
+                        ' add_sched_tree, set_node_bw, get_node_bw')
 
-    if sys.argv[1] in ['create', 'list', 'destroy', 'flush', 'validate', 'query']:
+    if sys.argv[1] in ['create', 'list', 'destroy', 'flush', 'validate', 'query'
+                       ]:
         if len(sys.argv) <= 2:
             raise Exception('please input port id')
         port_id = int(sys.argv[2])
+
+    elif sys.argv[1] == 'add_sched_tree':
+        if len(sys.argv) != 6:
+            raise Exception('add_port_node port_id profile_id tc_num vf_num')
+        port_id = int(sys.argv[2])
+        profile_id = int(sys.argv[3])
+        tc_num = int(sys.argv[4])
+        vf_num = int(sys.argv[5])
+
+    elif sys.argv[1] == 'set_node_bw':
+        if len(sys.argv) != 5:
+            raise Exception('set_node_bw port_id committed_bw peak_bw')
+        port_id = int(sys.argv[2])
+        committed_bw = int(sys.argv[3])
+        peak_bw = int(sys.argv[4])
+
+    elif sys.argv[1] == 'get_node_bw':
+        if len(sys.argv) != 3:
+            raise Exception('get_node_bw port_id')
+        port_id = int(sys.argv[2])
+
     elif sys.argv[1] != 'listports':
         raise Exception('please input right action: create, list, destroy, query, flush, validate, listports')
 
@@ -162,6 +218,7 @@ if __name__ == '__main__':
 
     channel = grpc.secure_channel('localhost:50051', creds)
     stub = FlowServiceStub(channel)
+    qos_stub = QosServiceStub(channel)
     if sys.argv[1].lower() == 'create':
         test_create(port_id)
     elif sys.argv[1].lower() == 'destroy':
@@ -176,3 +233,9 @@ if __name__ == '__main__':
         test_flush(port_id)
     elif sys.argv[1].lower() == 'listports':
         test_list_ports()
+    elif sys.argv[1].lower() == 'add_sched_tree':
+        test_add_sched_tree(port_id, profile_id, tc_num, vf_num)
+    elif sys.argv[1].lower() == 'set_node_bw':
+        test_set_node_bw(port_id, committed_bw, peak_bw)
+    elif sys.argv[1].lower() == 'get_node_bw':
+        test_get_node_bw(port_id)

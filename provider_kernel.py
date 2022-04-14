@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import flow_pb2 as pb
+#????
+from comm_struct import QosError
 
 def Create(request, context):
     print("kerenl implement: Create: ip link set...")
@@ -47,6 +49,24 @@ def Isolate(request, context):
     print("kerenl implement: Isolate: ip link set...")
     return pb.ResponseFlow(error_info=pb.rte_flow_error(
                             type=-1, mesg='Isolate now not supported by kernel, wait implement.'))
+
+def Qos_shaper_profile_add(port_id, profile_id, cbw, pbw):
+    print("kerenl implement: shaper_profile_add")
+    raise QosError(-1, "shaper_profile_add not supported.")
+
+def Qos_shaper_profile_del(port_id, profile_id):
+    print("kerenl implement: shaper_profile_del.")
+
+def Qos_node_add(port_id, node_id, parent_node_id, level_id, profile_id):
+    print("kerenl implement: QoS_node_add")
+    raise QosError(-1, "Qos_node_add not supported.")
+
+def Qos_node_delete(port_id, node_id):
+    print("kerenl implement: Qos_node_delete.")
+
+def Qos_commit(port_id):
+    print("kerenl implement: schedual tree commit")
+    raise QosError(-1, "schedual tree commit not supported.")
 
 def init_ports(ports_config, server_config):
     print("kerenl implement: Initalize: ip link set...")

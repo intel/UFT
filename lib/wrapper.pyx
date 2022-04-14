@@ -18,6 +18,7 @@ from libc.string cimport memset, strlen, memcpy
 from libc.stdint cimport uint32_t, int32_t, int64_t, uint8_t, uint16_t, uint64_t
 from ctypes import *
 
+import time
 cimport clibdpdk
 import comm_struct
 from comm_struct import *
@@ -52,6 +53,13 @@ def rte_eal_init(args):
 
     return c_ret
 
+def rte_eth_dev_close(port_id):
+    try:
+        clibdpdk.rte_eth_dev_close(port_id)
+    except Exception as e:
+        print("Except: {}".format(e))
+    print("close port %d" %port_id)
+
 # return < 0: error occur and raise error message.
 def rte_flow_validate(port_id, attr, patterns, actions):
     cdef:
@@ -74,7 +82,6 @@ def rte_flow_validate(port_id, attr, patterns, actions):
     print("Validate ok...")
     return 0
 
-
 # return < 0: error occur, else return flow index on port @port_id.
 def rte_flow_create(port_id, attr, patterns, actions):
     cdef:
@@ -91,8 +98,12 @@ def rte_flow_create(port_id, attr, patterns, actions):
     c_patterns = <clibdpdk.rte_flow_item*>py2c_convert(patterns, mapping)
     c_actions = <clibdpdk.rte_flow_action*>py2c_convert(actions, mapping)
 
-    memset(&c_error, 0x22, sizeof(c_error))
-    c_rte_flow = clibdpdk.rte_flow_create(port_id, c_attr, c_patterns, c_actions, &c_error)
+    for i in retry_policy.get_limit():
+        memset(&c_error, 0x22, sizeof(c_error))
+        c_rte_flow = clibdpdk.rte_flow_create(port_id, c_attr, c_patterns, c_actions, &c_error)
+        if not (c_rte_flow is NULL and retry_policy.can_retry()):
+            break
+
     if c_rte_flow is NULL:
         raise Exception(c_error.message)
 
@@ -158,8 +169,11 @@ def rte_flow_destroy(port_id, flow_id):
         print("Except: {}".format(e))
         raise e
 
+    for i in retry_policy.get_limit():
+        c_ret = clibdpdk.rte_flow_destroy(port_id, c_rte_flow, &c_error)
+        if c_ret == 0 or not retry_policy.can_retry():
+            break
 
-    c_ret = clibdpdk.rte_flow_destroy(port_id, c_rte_flow, &c_error)
     if c_ret != 0:
         raise Exception("Destroy port %d rule %d fail: %s!" %(port_id, flow_id, c_error.message))
 
@@ -195,7 +209,7 @@ def rte_flow_query(port_id, flow_id, actions):
     return rte_flow_query_count(c_count.reset, c_count.hits_set, c_count.bytes_set, c_count.reserved, c_count.hits, c_count.bytes)
 
 def rte_eth_find_next_owned_by(port_id, owner):
-    port_id = clibdpdk.rte_eth_find_next_owned_by(0, owner)
+    port_id = clibdpdk.rte_eth_find_next_owned_by(port_id, owner)
     return port_id
 
 def rte_flow_flush(port_id):
@@ -206,14 +220,23 @@ def rte_flow_flush(port_id):
     if flow_pool.is_empty() == True:
         return 0
 
-    c_ret = clibdpdk.rte_flow_flush(port_id, &c_error)
+    for i in retry_policy.get_limit():
+        c_ret = clibdpdk.rte_flow_flush(port_id, &c_error)
+        if c_ret == 0 or not retry_policy.can_retry():
+            break
+
     if c_ret != 0:
         raise Exception("Destroy port %d all rule fail: %s!" %(port_id, c_error.message))
 
     flow_cnt = flow_pool.get_flow_cnt(port_id)
     for flow_id in range(flow_cnt):
-        flow_pool.remove_flow(port_id, flow_id)
-        print("Flow rule port %d #%d destroyed" %(port_id, flow_id))
+        try:
+            flow_pool.remove_flow(port_id, flow_id)
+            print("Flow rule port %d #%d destroyed" %(port_id, flow_id))
+        except Exception as e:
+            print("Flow rule port %d #%d has been removed by Destroy, skip" %(port_id, flow_id))
+
+    flow_pool.reset_flows(port_id)
 
     return 0
 
@@ -227,6 +250,70 @@ def rte_flow_isolate(port_id, set):
         raise Exception("Flow isolate %d fail: %s!" %(port_id, c_error.message))
 
     return 0
+
+def rte_tm_shaper_profile_add(port_id, profile_id, commit_bw, peak_bw):
+    cdef:
+        clibdpdk.rte_tm_shaper_params params
+        clibdpdk.rte_tm_error err
+
+    memset(&params, 0, sizeof(params))
+    memset(&err, 0, sizeof(err))  #__rte_unused
+    params.committed.rate = commit_bw
+    params.peak.rate = peak_bw
+    ret = clibdpdk.rte_tm_shaper_profile_add(port_id, profile_id, &params, &err)
+    if ret != 0:
+        raise QosError(ret, "QoS profile add fail")
+    return ret
+
+def rte_tm_shaper_profile_delete(port_id, profile_id):
+    cdef:
+        clibdpdk.rte_tm_error err
+
+    memset(&err, 0, sizeof(err))
+    ret = clibdpdk.rte_tm_shaper_profile_delete(port_id, profile_id, &err)
+    if ret != 0:
+        print("rte_tm_shaper_profile_delete fail ret = %d" % ret)
+    return ret
+
+def rte_tm_node_add(port_id, node_id, parent_node_id, level_id, profile_id):
+    cdef:
+        uint32_t buf[16]
+        clibdpdk.rte_tm_error err
+        clibdpdk.rte_tm_node_params params
+
+    memset(&params, 0, sizeof(params))
+    params.shaper_profile_id = profile_id
+    if node_id < 8: #max queue num
+        params.leaf.wred.wred_profile_id = 0xffffffff
+    else:
+        params.nonleaf.n_sp_priorities = 1
+
+    memset(&err, 0, sizeof(err))
+    print("node id %s, parent node id %s, profile %s" % (node_id, parent_node_id, profile_id))
+    ret = clibdpdk.rte_tm_node_add(port_id, node_id, parent_node_id, 0, 1, level_id, &params, &err)
+    if ret != 0:
+        raise QosError(ret, "QoS node add faile")
+    return ret
+
+def rte_tm_node_delete(port_id, node_id):
+    cdef:
+        clibdpdk.rte_tm_error err
+
+    memset(&err, 0, sizeof(err))
+    ret = clibdpdk.rte_tm_node_delete(port_id, node_id, &err)
+    if ret != 0:
+        print("rte_tm_node_delete fail ret = %d" % ret)
+    return ret
+
+def rte_tm_hierarchy_commit(port_id):
+    cdef:
+        clibdpdk.rte_tm_error err
+
+    memset(&err, 0, sizeof(err))
+    ret = clibdpdk.rte_tm_hierarchy_commit(port_id, 1, &err)
+    if ret != 0:
+        raise QosError(ret, "sched tree commit fail")
+    return ret
 
 def rte_le_to_be_16(val):
     return ((val >> 8) & 0xff) | ((val << 8) & 0xff00)
@@ -598,8 +685,9 @@ cdef class Py2CFlowActionCountConvertor(Py2CConvertor):
         else:
             c_count = <clibdpdk.rte_flow_action_count *>reserved
 
-        c_count.shared = pyObj.shared
-        c_count.reserved = pyObj.reserved
+        IF DPDK_VERSION == 'v21.08':
+            c_count.shared = pyObj.shared
+            c_count.reserved = pyObj.reserved
         c_count.id = pyObj.id
 
         print("Action count: ", c_count[0])
@@ -744,6 +832,11 @@ class FlowPool:
         pyFlow.cdealloc()
         self.__pool[port_id][flow_idx] = None
 
+    # reset flow index after flow_flush
+    def reset_flows(self, port_id):
+        if port_id in self.__pool:
+            self.__pool[port_id] = []
+
     def is_empty(self):
         if len(self.__pool.keys()) == 0:
             return True
@@ -751,6 +844,36 @@ class FlowPool:
         return False
 
 flow_pool = FlowPool()
+
+class RetryPolicy:
+    def __init__(self):
+        self.__interval = 0
+        self.__limit = 0
+        self.__failures = 0
+        self.__fail_busy = 0
+
+    def set_policy(self, interval, limit):
+        self.__interval = interval
+        self.__limit = limit
+        print('set interval = %d limit = %d' %(self.__interval, self.__limit))
+
+    def can_retry(self):
+        self.__failures += 1
+        res = (clibdpdk.per_lcore__rte_errno == clibdpdk.EAGAIN)
+        if res:
+            clibdpdk.per_lcore__rte_errno = 0
+            self.__fail_busy += 1
+            time.sleep(self.__interval / 1000)
+            print('fails %d times fail_busy = %d' %(self.__failures, self.__fail_busy))
+        return res
+
+    def get_limit(self):
+        return range(0, self.__limit + 1)
+
+def set_retry_policy(interval, limit):
+    retry_policy.set_policy(interval, limit)
+
+retry_policy = RetryPolicy()
 
 cdef char *flow_to_string(clibdpdk.rte_flow_attr *c_attr,  \
                         clibdpdk.rte_flow_item *c_patterns,     \

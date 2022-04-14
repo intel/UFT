@@ -14,17 +14,48 @@ limitations under the License.
 
 -->
 
-Build:
-    docker build -t uft -f Dockerfile.third . \
-    --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy
+# Build Docker:
 
-Run:
-    docker run -v /dev/hugepages:/dev/hugepages -v /usr/lib/firmware:/usr/lib/firmware:rw \
-    -e  PCIDEVICE_INTEL_COM_INTEL_ENS801F0=0000:83:01.0 --net=host --cap-add IPC_LOCK \
-    --cap-add SYS_NICE --device /dev/vfio:/dev/vfio uft
+## Options
 
-FAQ:
+* DPDK_TAG:
+ DPDK version (default: the latest version of main branch)
+
+* UFT_INSTALL_PATH:
+ DPDK library installing path (default: /usr/local/lib64)
+
+## Example:
+
+``` shell
+cd <work_dir>/dcf
+
+docker build -t uft -f images/Dockerfile.uft . \
+	--build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy \
+	--build-arg DPDK_TAG=v22.03 --build-arg UFT_INSTALL_PATH=/usr/local/lib64
+```
+
+# Run:
+
+## Options
+
+* PCIDEVICE_INTEL_COM_INTEL_ENS801F0:
+ Select CVL DCF port (required)
+
+
+## Example:
+
+``` shell
+docker run -v /dev/hugepages:/dev/hugepages -v /usr/lib/firmware:/usr/lib/firmware:rw \
+	-e  PCIDEVICE_INTEL_COM_INTEL_ENS801F0=0000:83:01.0 --net=host --cap-add IPC_LOCK \
+	--cap-add SYS_NICE --device /dev/vfio:/dev/vfio uft
+```
+
+# FAQ:
+
 1. How to run docker in none-root mode?
-   We must make sure the user has the authority to run docker.
-   We can add one user to docker group by command:
-       usermod -a -G docker xxx
+   We must make sure the user has the authority to run docker,
+   so we need to add the user to docker group, command as bellow:
+
+``` shell
+usermod -a -G docker xxx
+```

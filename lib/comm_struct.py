@@ -618,3 +618,8 @@ rte_flow_attr.__new__.__defaults__ = (0, 0, 1, 0, 0, 0)
 
 rte_flow_list_result = collections.namedtuple('rte_flow_list_result', ['flow_id', 'description'])
 rte_flow_list_result.__new__.__defaults__ = (0, '')
+
+class QosError(ValueError):
+    def __init__(self, e_code, e_msg):
+        self.e_code = e_code
+        self.e_msg = e_msg

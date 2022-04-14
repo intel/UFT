@@ -30,3 +30,15 @@ ports_info :
           - pci  : "0000:18:11.0"
             intf : enp24s17
             mode : dcf
+
+### Config retry policy ###
+#
+# UFT will automatically retry when the request fails, 
+# you can configure the retry interval and maximum number of retries.
+# The default value will be used if you don't configure it
+#
+# interval: interval between retries (default 200,in milliseconds)
+# limit: maximum number of retries   (default 1)
+retry_conf:
+    interval: 200
+    limit: 2 

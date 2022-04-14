@@ -15,11 +15,11 @@
 import dpdk
 import comm_struct
 import flow_pb2 as pb
+from comm_struct import QosError
 import google.protobuf.pyext._message
 
 mapping = {
     "flow.rte_flow_attr": comm_struct.rte_flow_attr,
-
     "flow.rte_flow_item": comm_struct.rte_flow_item,
     "flow.rte_flow_item.type": "type_",
     "flow.rte_flow_item_eth": comm_struct.rte_flow_item_eth,
@@ -212,6 +212,23 @@ def List(request, context):
 def Isolate(request, context):
     return pb.ResponseFlow()
 
+###QoS parameter was confuse###
+##should add structure
+def Qos_shaper_profile_add(port_id, profile_id, cbw, pbw):
+    return dpdk.rte_tm_shaper_profile_add(port_id, profile_id, cbw, pbw)
+
+def Qos_shaper_profile_del(port_id, profile_id):
+    return dpdk.rte_tm_shaper_profile_delete(port_id, profile_id)
+
+def Qos_node_add(port_id, node_id, parent_node_id, level_id, profile_id):
+    return dpdk.rte_tm_node_add(port_id, node_id, parent_node_id, level_id, profile_id)
+
+def Qos_node_delete(port_id, node_id):
+    return dpdk.rte_tm_node_delete(port_id, node_id)
+
+def Qos_commit(port_id):
+    return dpdk.rte_tm_hierarchy_commit(port_id)
+
 def takecompkey(elem):
     return elem['pci']
 
@@ -230,7 +247,7 @@ def init_ports(ports_config, server_config):
         ld_lib = server_config['ld_lib']
     else:
         ld_lib = '/usr/local/lib'
-    param = 'a.out -c 0x30 -n 4 %s -d %s --file-prefix=dcf --'
+    param = 'a.out -v -c 0x30 -n 4 %s -d %s --file-prefix=dcf --'
     # param = 'a.out -c 0x30 -n 4 -d %s %s --log-level=pmd.net.ice.driver:8 --file-prefix=dcf --'
     param = param % (pci_list_str, ld_lib)
     print('the dcf cmd line is: %s' % param)
@@ -249,8 +266,22 @@ def init_ports(ports_config, server_config):
 
     return ports_config
 
+def init_retry(interval, limit):
+    # in millisecond
+    if not interval or interval <= 0:
+        interval = 200
+    if not limit or limit <= 0:
+        limit = 1
+
+    dpdk.set_retry_policy(interval, limit)
+
 def handle_exit(port_config):
     try:
         dpdk.rte_flow_flush(port_config["port_mode_index"])
+    except Exception as e:
+        print(e)
+
+    try:
+        dpdk.rte_eth_dev_close(port_config["port_mode_index"])
     except Exception as e:
         print(e)

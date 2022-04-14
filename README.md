@@ -52,21 +52,25 @@ pip3 install cython
 pip3 install setuptools
 ```
 
-### Modify the setup.py with your DPDK location
+### Build DPDK wrapper
+#### Modify the setup.py with your DPDK location
 
 ``` shell
 cd lib
 vim setup.py
-# Change the dpdk_dir variable to your <dpdk>/RTE_TARGET, such as
-# dpdk_dir = '/root/dpdk/x86_64-native-linuxapp-gcc'
-```
+# Change the lib_dirs and inc_dirs variable to your dpdk library's installation directory, such as
+# lib_dirs = ['/usr/local/lib/x86_64-linux-gnu']
+# inc_dirs = ['/usr/local/include']
+# Change the lib_ver variable to your dpdk library's version, such as
+# lib_ver = ['v22.03']
 
-### Build DPDK wrapper
-
-``` shell
 python3 setup.py build_ext --inplace
 ```
-
+#### Or you can build wrapper directly
+``` shell
+cd lib
+python3 setup.py build_ext --inplace --dpdkver=<dpdk version> --dpdklib=<dpdk library directory> --dpdkinc=<dpdk include directory>
+```
 That will generate a _dpdk.cython-<your-target>.so_ in current lib folder
 
 ## Generate gRPC client/server code
@@ -84,8 +88,12 @@ Compile the flow protobuf to Python code
 cd rpc
 python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. flow.proto
 ```
-
 That will generate _flow_pb2_grpc.py_ and _flow_pb2.py_.
+
+``` shell
+python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. qos.proto
+```
+That will generate _qos_pb2_grpc.py_ and _qos_pb2.py_.
 
 ## Generate gRPC authentic certification
 
@@ -130,7 +138,7 @@ openssl x509 -req -in server.csr -CA ca.cert -CAkey ca.key -CAcreateserial -out 
 
 server :
    server_port : 50051
-   ld_lib : "/root/home/dpdk-dcf/x86_64-native-linuxapp-gcc/" # Point to your dpdk lib
+   ld_lib : "/root/home/dpdk-dcf/x86_64-native-linuxapp-gcc/" # Point to your dpdk lib (installation directory)
    cert_key : "/root/dcf-tool/my_certs/server.key" # Point to the key certificate for the server
    cert_certificate : "/root/dcf-tool/my_certs/server.pem" # Point to the certificate for the server
 
@@ -172,7 +180,10 @@ Launch gRPC server
 ``` shell
 python3 server.py
 ```
-
+If your dpdk library was not installed in LD_LIBRARY_PATH, you need to
+``` shell
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:<dpdk library directory>
+```
 ## Run 3rd party gRPC client (gRPC UI)
 
 ### Install gRPC UI

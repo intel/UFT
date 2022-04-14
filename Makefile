@@ -13,18 +13,18 @@
 # limitations under the License.
 
 DPDK_NAME = dpdk-shared-lib
-DPDK_TAG = v21.08
+DPDK_TAG = v22.03
 IMAGE_NAME = ${DPDK_NAME}:${DPDK_TAG}
-DCF_NAME = dcf-tool
+DCF_NAME = uft
 DCF_IMAGE_NAME = ${DCF_NAME}:${DPDK_TAG}
 
 # To pass proxy for docker build from env invoke make with make image-<IMAGE> HTTP_PROXY=$http_proxy HTTPs_PROXY=$https_proxy
 DOCKERARGS?=
-ifdef HTTP_PROXY
-	DOCKERARGS += --build-arg http_proxy=$(HTTP_PROXY)
+ifdef http_proxy
+	DOCKERARGS += --build-arg http_proxy=$(http_proxy)
 endif
-ifdef HTTPS_PROXY
-	DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
+ifdef https_proxy
+	DOCKERARGS += --build-arg https_proxy=$(https_proxy)
 endif
 
 
