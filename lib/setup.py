@@ -23,10 +23,12 @@ libs = [
 ]
 lib_dirs = ['/usr/local/lib']
 inc_dirs = ['/usr/local/include']
+lib_ver = ['v22.03']
 
 parser = argparse.ArgumentParser(add_help = False)
 parser.add_argument('--dpdklib', action = 'append')
 parser.add_argument('--dpdkinc', action = 'append')
+parser.add_argument('--dpdkver', action = 'append')
 args, left = parser.parse_known_args()
 
 if args.dpdklib:
@@ -37,12 +39,18 @@ if args.dpdkinc:
     inc_dirs = args.dpdkinc
     print('DPDK inc: %s' % inc_dirs)
 
+if args.dpdkver:
+    lib_ver = args.dpdkver
+    print('DPDK ver: %s' % lib_ver)
+
 if '-h' in sys.argv or '--help' in sys.argv:
     print('''DPDK options:
   --dpdklib           Specify the DPDK libraries directory
                       [default: /usr/local/lib]
   --dpdkinc           Specify the DPDK included files directory
                       [default: /usr/local/include]
+  --dpdkver           Specify the DPDK version
+                      [default: v22.03]
 ''')
 
 sys.argv = sys.argv[:1] + left
@@ -61,6 +69,7 @@ setup(
             extra_link_args=[]
         ),
         compiler_directives={'language_level' : "3"},
+        compile_time_env={'DPDK_VERSION': lib_ver[0]},
         **kwarg
     )
 )

@@ -14,8 +14,20 @@
 
 cimport cython
 from libc.stdint cimport uint32_t, int32_t, int64_t, uint8_t, uint16_t, uint64_t
+from libc.errno cimport EAGAIN
 
 DEF RTE_ETHER_ADDR_LEN = 6
+
+IF DPDK_VERSION == "v21.08":
+    cdef extern from "rte_flow.h" nogil:
+        struct rte_flow_action_count:
+            uint32_t shared
+            uint32_t reserved
+            uint32_t id
+ELSE:
+    cdef extern from "rte_flow.h" nogil:
+        struct rte_flow_action_count:
+            uint32_t id
 
 cdef extern from "rte_ether.h" nogil:
     struct rte_ether_addr:
@@ -420,11 +432,6 @@ cdef extern from "rte_flow.h" nogil:
     struct rte_flow_action_queue:
         uint16_t index
 
-    struct rte_flow_action_count:
-        uint32_t shared
-        uint32_t reserved
-        uint32_t id
-
     struct rte_flow_query_count:
         uint32_t reset
         uint32_t hits_set
@@ -635,6 +642,107 @@ cdef extern from "rte_flow.h" nogil:
 cdef extern from "rte_ethdev.h":
     uint64_t rte_eth_find_next_owned_by(uint16_t port_id, \
                 const uint64_t owner_id)
+    int rte_eth_dev_close(uint16_t port_id)
 
+cdef extern from "rte_tm.h":
+    struct rte_tm_token_bucket:
+        uint64_t rate
+        uint64_t size
 
+    struct rte_tm_shaper_params:
+        rte_tm_token_bucket committed
+        rte_tm_token_bucket peak
+        int32_t pkt_length_adjust
+        int packet_mode
+
+    enum rte_tm_error_type:
+        RTE_TM_ERROR_TYPE_NONE         = 0
+        RTE_TM_ERROR_TYPE_UNSPECIFIED  = 1
+        RTE_TM_ERROR_TYPE_CAPABILITIES = 2
+        RTE_TM_ERROR_TYPE_LEVEL_ID     = 3
+        RTE_TM_ERROR_TYPE_WRED_PROFILE = 4
+        RTE_TM_ERROR_TYPE_WRED_PROFILE_GREEN  = 5
+        RTE_TM_ERROR_TYPE_WRED_PROFILE_YELLOW = 6
+        RTE_TM_ERROR_TYPE_WRED_PROFILE_RED    = 7
+        RTE_TM_ERROR_TYPE_WRED_PROFILE_ID     = 8
+        RTE_TM_ERROR_TYPE_SHARED_WRED_CONTEXT_ID = 9
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE         = 10
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_COMMITTED_RATE = 11
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_COMMITTED_SIZE = 12
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_PEAK_RATE      = 13
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_PEAK_SIZE      = 14
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_PKT_ADJUST_LEN = 15
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_PACKET_MODE    = 16
+        RTE_TM_ERROR_TYPE_SHAPER_PROFILE_ID      = 17
+        RTE_TM_ERROR_TYPE_SHARED_SHAPER_ID       = 18
+        RTE_TM_ERROR_TYPE_NODE_PARENT_NODE_ID    = 19
+        RTE_TM_ERROR_TYPE_NODE_PRIORITY          = 20
+        RTE_TM_ERROR_TYPE_NODE_WEIGHT            = 21
+        RTE_TM_ERROR_TYPE_NODE_PARAMS            = 22
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_SHAPER_PROFILE_ID = 23
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_SHARED_SHAPER_ID  = 24
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_N_SHARED_SHAPERS  = 25
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_WFQ_WEIGHT_MODE   = 26
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_N_SP_PRIORITIES   = 27
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_CMAN              = 28
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_WRED_PROFILE_ID   = 29
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_SHARED_WRED_CONTEXT_ID = 30
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_N_SHARED_WRED_CONTEXTS = 31
+        RTE_TM_ERROR_TYPE_NODE_PARAMS_STATS = 32
+        RTE_TM_ERROR_TYPE_NODE_ID           = 33
+
+    struct rte_tm_error:
+        int type
+        const void *cause
+        const char *message
+
+    struct rte_nonleaf:
+        int *wfq_weight_mode
+        uint32_t n_sp_priorities
+
+    struct rte_wred:
+        uint32_t wred_profile_id
+        uint32_t *shared_wred_context_id
+        uint32_t n_shared_wred_contexts
+
+    struct rte_leaf:
+        int cman
+        rte_wred wred
+
+    struct rte_tm_node_params:
+        int32_t shaper_profile_id
+        uint32_t *shared_shaper_id
+        uint32_t n_shared_shapers
+        rte_nonleaf nonleaf
+        rte_leaf leaf
+        uint64_t stats_mask
+
+    int rte_tm_shaper_profile_add(uint16_t port_id, \
+        uint32_t shaper_profile_id,                 \
+        rte_tm_shaper_params *profile,              \
+        rte_tm_error *error)
+
+    int rte_tm_shaper_profile_delete(uint16_t port_id, \
+        uint32_t shaper_profile_id,                    \
+        rte_tm_error *error)
+
+    int rte_tm_node_add(uint16_t port_id, \
+        uint32_t node_id,                 \
+        int32_t parent_node_id,          \
+        uint32_t priority,                \
+        uint32_t weight,                  \
+        uint32_t level_id,                \
+        rte_tm_node_params *param,                  \
+        rte_tm_error *error)
+
+    int rte_tm_node_delete(uint16_t port_id, \
+        uint32_t node_id,                    \
+        rte_tm_error *error);
+
+    int rte_tm_hierarchy_commit(uint16_t port_id, \
+        int clear_on_fail,                        \
+        rte_tm_error *error)
+
+cdef extern from "rte_errno.h":
+    int per_lcore__rte_errno
 

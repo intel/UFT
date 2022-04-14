@@ -52,7 +52,7 @@ WORKDIR /
 COPY ./ /opt/dcf
 
 WORKDIR /opt/dcf/lib
-RUN python3 setup.py build_ext --inplace --dpdkinc=/tmp/dpdk/install/usr/local/include --dpdklib=/tmp/dpdk/install/usr/local/lib64
+RUN python3 setup.py build_ext --inplace --dpdkinc=/tmp/dpdk/install/usr/local/include --dpdklib=/tmp/dpdk/install/usr/local/lib64 --dpdkver=${DPDK_TAG}
 
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4
