@@ -28,7 +28,7 @@ limitations under the License.
 
 ``` shell
 cd <work_dir>/dcf
-
+# set ld_lib = ${UFT_INSTALL_PATH} in entrypoint.sh
 docker build -t uft -f images/Dockerfile.uft . \
 	--build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy \
 	--build-arg DPDK_TAG=v22.03 --build-arg UFT_INSTALL_PATH=/usr/local/lib64
