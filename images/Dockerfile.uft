@@ -72,6 +72,7 @@ RUN microdnf install python36-3.6.8 gcc-c++ \
 
 WORKDIR /opt/dcf/rpc
 RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. flow.proto
+RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. qos.proto
 
 WORKDIR /opt/dcf
 COPY ./images/entrypoint.sh /
