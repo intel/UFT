@@ -21,6 +21,7 @@ package qos;
 service QosService {
     rpc Add_TM_Node(RequestAdd_TM_Node) returns (ResponseRet) {}
     rpc Set_Node_BW(RequestSet_Node_BW) returns (ResponseRet) {}
+    rpc Del_Node_BW(RequestDel_Node_BW) returns (ResponseRet) {}
     rpc Get_Node_BW(RequestGet_Node_BW) returns (ResponseBW) {}
 }
 
@@ -37,8 +38,14 @@ message RequestAdd_TM_Node {
 
 message RequestSet_Node_BW {
     uint32 port_id = 1;
-    uint64 committed_bw = 2;
-    uint64 peak_bw = 3;
+    uint32 profile_id = 2;
+    uint64 committed_bw = 3;
+    uint64 peak_bw = 4;
+}
+
+message RequestDel_Node_BW {
+    uint32 port_id = 1;
+    uint64 profile_id = 2;
 }
 
 message RequestGet_Node_BW {

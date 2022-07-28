@@ -13,7 +13,7 @@
 # limitations under the License.
 
 DPDK_NAME = dpdk-shared-lib
-DPDK_TAG = v22.03
+DPDK_TAG = v22.07
 IMAGE_NAME = ${DPDK_NAME}:${DPDK_TAG}
 DCF_NAME = uft
 DCF_IMAGE_NAME = ${DCF_NAME}:${DPDK_TAG}

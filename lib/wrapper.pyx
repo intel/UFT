@@ -292,7 +292,7 @@ def rte_tm_node_add(port_id, node_id, parent_node_id, level_id, profile_id):
     print("node id %s, parent node id %s, profile %s" % (node_id, parent_node_id, profile_id))
     ret = clibdpdk.rte_tm_node_add(port_id, node_id, parent_node_id, 0, 1, level_id, &params, &err)
     if ret != 0:
-        raise QosError(ret, "QoS node add faile")
+        raise QosError(ret, "QoS node add fail")
     return ret
 
 def rte_tm_node_delete(port_id, node_id):

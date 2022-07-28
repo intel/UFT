@@ -64,7 +64,7 @@ COPY --from=0 /tmp/dpdk/install/usr/local/lib64 ${UFT_INSTALL_PATH}
 COPY --from=0 /opt/dcf /opt/dcf
 COPY --from=0 /usr/local/lib/libnuma.so.1 ${UFT_INSTALL_PATH}
 
-RUN microdnf install python36-3.6.8 gcc-c++ \
+RUN microdnf install python36-3.6.8 \
 	&& python3 -m pip install --upgrade --force pip \
 	&& pip3 install --no-cache-dir grpcio-tools grpcio-reflection pyyaml \
 	&& microdnf update libxml2 lz4-libs rpm systemd-libs \
@@ -77,4 +77,5 @@ RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. qos.pro
 WORKDIR /opt/dcf
 COPY ./images/entrypoint.sh /
 
+ENV UFT_INSTALL_PATH=${UFT_INSTALL_PATH}
 ENTRYPOINT ["/entrypoint.sh"]

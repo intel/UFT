@@ -199,3 +199,12 @@ Please refer to [gRPC UI github](https://github.com/fullstorydev/grpcui)
 ## Build a gRPC client which implements DPDK vdev API
 
 TODO
+## NOTICE
+
+The PortID returned by `listports` (called external PortID) is the port order in the configuration file, but the PortID in DPDK (called internal PortID) depends on BDF. Please use the external PortID when calling RPC, UFT will map external portID to internal PortID.
+
+Internal PortID is in ascending order of BDF, for example:
+
+external Port0 -- 0000:86:00.1 -- internal Port1
+external Port1 -- 0000:86:00.2 -- internal Port2
+external Port2 -- 0000:0a:00.1 -- internal Port0

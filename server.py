@@ -19,6 +19,7 @@ import grpc
 import time
 from concurrent import futures
 import atexit
+import signal
 #from pip._vendor.requests.api import request
 #from lib2to3.fixes.fix_input import context
 
@@ -150,8 +151,16 @@ class Qos(qos_pb2_grpc.QosServiceServicer):
 
     def Add_TM_Node(self, request, context):
         port_id = request.port_id
+        err = check_port_valid(port_id, ports)
+        if err.type == -1:
+            return pb.ResponseFlow(error_info=err)
+
+        port_mode = ports[port_id]["mode"]
+        # the real port index of current mode
+        request.port_id = ports[port_id]["port_mode_index"]
+        port_id = request.port_id
+
         profile_id = request.profile_id
-        port_mode = 'dcf'
         resp = qos_pb2.ResponseRet()
 
         print("add root node for port %d" % port_id)
@@ -163,7 +172,6 @@ class Qos(qos_pb2_grpc.QosServiceServicer):
             print("exc: %s" % e)
             resp.ret = -1
             resp.msg = str(e)
-        print("ret = %s" % ret)
 
         for i in range(0, request.tc_num):
             tc_node_id = 1000 - 100 * i
@@ -198,11 +206,19 @@ class Qos(qos_pb2_grpc.QosServiceServicer):
         return resp
 
     def Set_Node_BW(self, request, context):
-        profile_id = 1  #fixed
         port_id = request.port_id
+        err = check_port_valid(port_id, ports)
+        if err.type == -1:
+            return pb.ResponseFlow(error_info=err)
+
+        port_mode = ports[port_id]["mode"]
+        # the real port index of current mode
+        request.port_id = ports[port_id]["port_mode_index"]
+        port_id = request.port_id
+
+        profile_id = request.profile_id
         cbw = request.committed_bw
         pbw = request.peak_bw
-        port_mode = 'dcf'
 
         print("set cbw %d, pbw %d as profile %d" %
               (cbw, pbw, profile_id))
@@ -211,6 +227,34 @@ class Qos(qos_pb2_grpc.QosServiceServicer):
 
         try:
             ret = providers[port_mode].Qos_shaper_profile_add(port_id, profile_id, cbw, pbw)
+        except Exception as e:
+            print("exc: %s" % e)
+            resp.ret = -1
+            resp.msg = str(e)
+        else:
+            resp.ret = ret
+            resp.msg = "ok"
+
+        return resp
+
+    def Del_Node_BW(self, request, context):
+        port_id = request.port_id
+        err = check_port_valid(port_id, ports)
+        if err.type == -1:
+            return pb.ResponseFlow(error_info=err)
+
+        port_mode = ports[port_id]["mode"]
+        # the real port index of current mode
+        request.port_id = ports[port_id]["port_mode_index"]
+        port_id = request.port_id
+
+        profile_id = request.profile_id
+        print("delete profile %d" %  profile_id)
+
+        resp = qos_pb2.ResponseRet()
+
+        try:
+            ret = providers[port_mode].Qos_shaper_profile_del(port_id, profile_id)
         except Exception as e:
             print("exc: %s" % e)
             resp.ret = -1
@@ -293,6 +337,10 @@ def handle_exit():
             if port_config['mode'] == cur_mode:
                 providers[cur_mode].handle_exit(port_config)
 
+def signal_handler(signum, frame):
+    print("recv signal ", signum)
+    sys.exit()
+
 def main():
     global ports
     print('do eal init ...')
@@ -342,6 +390,9 @@ def main():
         server_thread.add_insecure_port('localhost:50051')
 
     atexit.register(handle_exit)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     server_thread.start()
 
