@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-grpcio_reflection==1.35.0
-grpcio==1.35.0
-grpcio-tools==1.35.0
-Cython==0.29.14
+grpcio_reflection==1.40.0
+grpcio==1.40.0
+grpcio-tools==1.40.0
+Cython==0.29.30
 PyYAML==5.4.1

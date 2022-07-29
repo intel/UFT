@@ -31,7 +31,7 @@ fi
 echo "Generating server_conf.yaml file..."
 cat > $SERVER_CONF_FILE <<EOF
 server :
-    ld_lib : "/usr/local/lib64"
+    ld_lib : "${UFT_INSTALL_PATH}"
 ports_info :
 EOF
 
@@ -46,4 +46,21 @@ echo "Done!"
 
 cat $SERVER_CONF_FILE
 
-python3 -u server.py
+nohup python3 -u server.py &
+server_pid=$!
+echo "server's pid=${server_pid}"
+
+function sig_handler()
+{
+    echo "Docker stopped, kill SIGTERM to ${server_pid}"
+    kill -SIGTERM ${server_pid}
+    sleep 1
+    exit 0
+}
+
+trap "sig_handler" SIGINT SIGTERM EXIT
+
+while true
+do
+    sleep 3
+done
