@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project('cython', 'c', default_options : ['warning_level=3'])
+project('UFT', 'cython',
+        license: 'BSD',
+        meson_version: '>= 0.61.0'
+)
 
 cy3 = find_program('cython', required : false)
 py3_dep = dependency('python3', required : false)

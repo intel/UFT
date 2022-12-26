@@ -21,9 +21,9 @@ libs = [
     ':librte_eal.so',
     ':librte_ethdev.so'
 ]
-lib_dirs = ['/usr/local/lib']
+lib_dirs = ['/usr/local/lib/x86_64-linux-gnu']
 inc_dirs = ['/usr/local/include']
-lib_ver = ['v22.03']
+lib_ver = ['v22.11']
 
 parser = argparse.ArgumentParser(add_help = False)
 parser.add_argument('--dpdklib', action = 'append')
@@ -50,7 +50,7 @@ if '-h' in sys.argv or '--help' in sys.argv:
   --dpdkinc           Specify the DPDK included files directory
                       [default: /usr/local/include]
   --dpdkver           Specify the DPDK version
-                      [default: v22.03]
+                      [default: v22.11]
 ''')
 
 sys.argv = sys.argv[:1] + left

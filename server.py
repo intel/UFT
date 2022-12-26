@@ -142,6 +142,15 @@ class Flow(pb_grpc.FlowServiceServicer):
             one_port.port_id = port_id
             one_port.port_pci = ports[port_id]['pci']
             one_port.port_mode = ports[port_id]['mode']
+
+            if ports[port_id]['mode'] == 'dcf':
+                reprs = providers['dcf'].get_repr_info(one_port.port_pci)
+                for i, repr_id in enumerate(reprs):
+                    one_repr = pb.repr_infomation()
+                    one_repr.vf_id = i + 1
+                    one_repr.repr_id = repr_id
+                    one_port.reprentor.append(one_repr)
+
             resp.ports.append(one_port)
         return resp
 
@@ -307,9 +316,13 @@ def init_ports(server_config):
         # add key-value in ports, depend on current mode real ports sort information
         if sort_ports is None:
             sort_ports = cur_port_list
-        for r_index in range(len(sort_ports)):
-            p_index = ports.index(sort_ports[r_index])
-            ports[p_index]['port_mode_index'] = r_index
+
+        for r_port_config in sort_ports:
+            r_index = r_port_config["port_mode_index"]
+            for p_index, p_port_config in enumerate(ports):
+                if p_port_config["pci"] == r_port_config["pci"]:
+                    ports[p_index]["port_mode_index"] = r_index
+        print(ports)
 
 def init_retry(retry_cfg):
     interval = None

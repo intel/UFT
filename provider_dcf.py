@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import dpdk
 import comm_struct
 import flow_pb2 as pb
@@ -84,7 +84,11 @@ mapping = {
     "flow.rte_flow_action.type": "type_",
     "flow.rte_flow_action_vf": comm_struct.rte_flow_action_vf,
     "flow.rte_flow_action_count": comm_struct.rte_flow_action_count,
+    "flow.rte_flow_action_ethdev" : comm_struct.rte_flow_action_ethdev,
 }
+
+version = 0
+representors_info = {}
 
 def proto2py_convertor(pb_obj_in, convert_dict={}):
     if isinstance(pb_obj_in, google.protobuf.any_pb2.Any):
@@ -107,7 +111,6 @@ def proto2py_convertor(pb_obj_in, convert_dict={}):
         py_fields={}
         for field in proto_obj.DESCRIPTOR.fields:
             py_field_name = field.name
-
             # Also support to map/convert the field name to py data struct
             if field.full_name in convert_dict:
                 py_field_name = convert_dict[field.full_name]
@@ -229,17 +232,63 @@ def Qos_node_delete(port_id, node_id):
 def Qos_commit(port_id):
     return dpdk.rte_tm_hierarchy_commit(port_id)
 
-def takecompkey(elem):
-    return elem['pci']
+#def takecompkey(elem):
+#    return elem['pci']
+
+def gen_repr_param(num):
+    result = ""
+    if num == 0:
+        return result
+
+    if num == 1:
+        result = ",representor=vf[1]"
+    else:
+        result = ",representor=vf[1-%d]" % (num)
+
+    return result
+
+def get_repr_num(pci):
+    num = 0
+    with open("/sys/bus/pci/devices/%s/physfn/sriov_numvfs" % pci) as f:
+        num = int(f.readline(4))
+
+    num = num - 1
+    if num <= 0:
+        num = 0
+
+    return num
+
+def get_repr_info(pci):
+    if version >= 22 * 12 + 11:
+        return representors_info[pci]
+    else:
+        return []
 
 def init_ports(ports_config, server_config):
-    pci_info = '-a %s,cap=dcf'
+    global version
+    global representors_info
+    pci_info = '-a %s,cap=dcf%s'
 
-    ports_config.sort(key=takecompkey)
+    year = dpdk.rte_version_year()
+    month = dpdk.rte_version_month()
+    print("dpdk's version -- v%d.%d " %(year, month))
+    version = year * 12 + month
+
+#    ports_config.sort(key=takecompkey)
+
     pci_list = []
     print(ports_config)
+
+    repr_num = []
     for port_config in ports_config:
-        pci_list.append(pci_info % port_config['pci'])
+        repr_param = ""
+        if version >= 22 * 12 + 11:
+            n_repr = get_repr_num(port_config['pci'])
+            repr_param = gen_repr_param(n_repr)
+            repr_num.append(n_repr)
+
+        pci_list.append(pci_info % (port_config['pci'], repr_param))
+
     pci_list_str = ' '.join(pci_list)
 
     # param = 'a.out -c 0x30 -n 4 -d %s %s --file-prefix=dcf --'
@@ -257,13 +306,23 @@ def init_ports(ports_config, server_config):
     if ret < 0:
         raise Exception("DPDK eal init failed (%d)" % ret)
 
-    # confirm all ports are valid by checking the port ids are successive.
-    # rte_eth_find_next_owned_by returns max_port if there is no other valid port.
-    # the value of max_port in dpdk is configurable, default is 32
-    for port_id in range(len(pci_list)):
-       if (port_id != dpdk.rte_eth_find_next_owned_by(port_id, 0)):
-           raise Exception("Port %d init failed" % port_id);
+    for p_index, port_config in enumerate(ports_config):
+        b_pci = bytes(port_config["pci"], encoding="utf-8")
+        port_id = dpdk.rte_eth_dev_get_port_by_name(b_pci)
 
+        ports_config[p_index]["port_mode_index"] = port_id
+
+        if version >= 22 * 12 + 11:
+            reprs_portid = []
+            for i in range(1, repr_num[p_index] + 1):
+                repr_name = "net_" + port_config["pci"] + "_representor_" + str(i)
+                b_repr = bytes(repr_name, encoding="utf-8")
+                repr_port_id = dpdk.rte_eth_dev_get_port_by_name(b_repr)
+                reprs_portid.append(repr_port_id)
+
+            representors_info[port_config["pci"]] = reprs_portid
+
+    print(ports_config)
     return ports_config
 
 def init_retry(interval, limit):

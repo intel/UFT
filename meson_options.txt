@@ -1,0 +1,3 @@
+option('lib_ver', type:'string',value:'v22.11', description:'the version of dpdk')
+option('lib_dirs', type:'string',value:'/usr/local/lib/x86_64-linux-gnu', description:'the library path of dpdk')
+option('inc_dirs', type:'string',value:'/usr/local/include', description:'the include path of dpdk')
