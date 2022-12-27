@@ -50,50 +50,23 @@ make install -j T=x86_64-native-linuxapp-gcc
 ``` shell
 pip3 install cython
 pip3 install setuptools
-```
-
-### Build DPDK wrapper
-#### Modify the setup.py with your DPDK location
-
-``` shell
-cd lib
-vim setup.py
-# Change the lib_dirs and inc_dirs variable to your dpdk library's installation directory, such as
-# lib_dirs = ['/usr/local/lib/x86_64-linux-gnu']
-# inc_dirs = ['/usr/local/include']
-# Change the lib_ver variable to your dpdk library's version, such as
-# lib_ver = ['v22.03']
-
-python3 setup.py build_ext --inplace
-```
-#### Or you can build wrapper directly
-``` shell
-cd lib
-python3 setup.py build_ext --inplace --dpdkver=<dpdk version> --dpdklib=<dpdk library directory> --dpdkinc=<dpdk include directory>
-```
-That will generate a _dpdk.cython-<your-target>.so_ in current lib folder
-
-## Generate gRPC client/server code
-
-Prepare the grpc protoc tools
-
-``` shell
 pip3 install grpcio-tools
 pip3 install grpcio-reflection
 ```
 
-Compile the flow protobuf to Python code
-
+### Build DPDK wrapper and generate grpc code
+#### specify the version & include path & lib path of dpdk in meson_options.txt and run meson
 ``` shell
-cd rpc
-python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. flow.proto
-```
-That will generate _flow_pb2_grpc.py_ and _flow_pb2.py_.
+vim meson_options.txt
+option('lib_ver', type:'string',value:'v22.11', description:'the version of dpdk')
+option('lib_dirs', type:'string',value:'/usr/local/lib/x86_64-linux-gnu', description:'the library path of dpdk')
+option('inc_dirs', type:'string',value:'/usr/local/include', description:'the include path of dpdk')
 
-``` shell
-python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. qos.proto
+meson build
 ```
-That will generate _qos_pb2_grpc.py_ and _qos_pb2.py_.
+That will generate some target files as below
+1. `dpdk.cython-<your platform>.so` in lib folder
+2. `flow_pb2*.py` `flow_version_pb2*.py` `qos_pb2_*.py` in rpc folder
 
 ## Generate gRPC authentic certification
 
@@ -208,3 +181,6 @@ Internal PortID is in ascending order of BDF, for example:
 external Port0 -- 0000:86:00.1 -- internal Port1
 external Port1 -- 0000:86:00.2 -- internal Port2
 external Port2 -- 0000:0a:00.1 -- internal Port0
+
+On v22.11 you should use `RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT` instead of `RTE_FLOW_ACTION_TYPE_VF` and use `rte_flow_action_ethdev` instead of `rte_flow_action_vf`.
+Use 'repr_id' returned by `listports` as `rte_flow_action_ethdev.port_id`

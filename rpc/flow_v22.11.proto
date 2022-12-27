@@ -1,0 +1,920 @@
+syntax = "proto3";
+package flow;
+
+message rte_flow_action_ethdev {
+	uint32 port_id = 1; /**< Integer value to return with packets. */
+}
+
+message repr_infomation {
+	uint32 vf_id = 1;
+	uint32 repr_id = 2;
+}
+
+message ports_information {
+    uint32 port_id = 1;
+    string port_pci = 2;
+    string port_mode = 3;
+    repeated repr_infomation reprentor = 4;
+}
+
+enum rte_flow_item_type {
+    /**
+     * [META]
+     *
+     * End marker for item lists. Prevents further processing of items;
+     * thereby ending the pattern.
+     *
+     * No associated specification messageure.
+     */
+    RTE_FLOW_ITEM_TYPE_END = 0;
+
+    /**
+     * [META]
+     *
+     * Used as a placeholder for convenience. It is ignored and simply
+     * discarded by PMDs.
+     *
+     * No associated specification messageure.
+     */
+    RTE_FLOW_ITEM_TYPE_VOID = 1;
+
+    /**
+     * [META]
+     *
+     * Inverted matching; i.e. process packets that do not match the
+     * pattern.
+     *
+     * No associated specification messageure.
+     */
+    RTE_FLOW_ITEM_TYPE_INVERT = 2;
+
+    /**
+     * Matches any protocol in place of the current layer; a single ANY
+     * may also stand for several protocol layers.
+     *
+     * See message rte_flow_item_any.
+     */
+    RTE_FLOW_ITEM_TYPE_ANY = 3;
+
+    /**
+     * Matches a byte string of a given length at a given offset.
+     *
+     * See message rte_flow_item_raw.
+     */
+    RTE_FLOW_ITEM_TYPE_RAW = 5;
+
+    /**
+     * Matches an Ethernet header.
+     *
+     * See message rte_flow_item_eth.
+     */
+    RTE_FLOW_ITEM_TYPE_ETH = 6;
+
+    /**
+     * Matches an 802.1Q/ad VLAN tag.
+     *
+     * See message rte_flow_item_vlan.
+     */
+    RTE_FLOW_ITEM_TYPE_VLAN = 7;
+
+    /**
+     * Matches an IPv4 header.
+     *
+     * See message rte_flow_item_ipv4.
+     */
+    RTE_FLOW_ITEM_TYPE_IPV4 = 8;
+
+    /**
+     * Matches an IPv6 header.
+     *
+     * See message rte_flow_item_ipv6.
+     */
+    RTE_FLOW_ITEM_TYPE_IPV6 = 9;
+
+    /**
+     * Matches an ICMP header.
+     *
+     * See message rte_flow_item_icmp.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP = 10;
+
+    /**
+     * Matches a UDP header.
+     *
+     * See message rte_flow_item_udp.
+     */
+    RTE_FLOW_ITEM_TYPE_UDP = 11;
+
+    /**
+     * Matches a TCP header.
+     *
+     * See message rte_flow_item_tcp.
+     */
+    RTE_FLOW_ITEM_TYPE_TCP = 12;
+
+    /**
+     * Matches a SCTP header.
+     *
+     * See message rte_flow_item_sctp.
+     */
+    RTE_FLOW_ITEM_TYPE_SCTP = 13;
+
+    /**
+     * Matches a VXLAN header.
+     *
+     * See message rte_flow_item_vxlan.
+     */
+    RTE_FLOW_ITEM_TYPE_VXLAN = 14;
+
+    /**
+     * Matches a E_TAG header.
+     *
+     * See message rte_flow_item_e_tag.
+     */
+    RTE_FLOW_ITEM_TYPE_E_TAG = 15;
+
+    /**
+     * Matches a NVGRE header.
+     *
+     * See message rte_flow_item_nvgre.
+     */
+    RTE_FLOW_ITEM_TYPE_NVGRE = 16;
+
+    /**
+     * Matches a MPLS header.
+     *
+     * See message rte_flow_item_mpls.
+     */
+    RTE_FLOW_ITEM_TYPE_MPLS = 17;
+
+    /**
+     * Matches a GRE header.
+     *
+     * See message rte_flow_item_gre.
+     */
+    RTE_FLOW_ITEM_TYPE_GRE = 18;
+
+    /**
+     * [META]
+     *
+     * Fuzzy pattern match; expect faster than default.
+     *
+     * This is for device that support fuzzy matching option.
+     * Usually a fuzzy matching is fast but the cost is accuracy.
+     *
+     * See message rte_flow_item_fuzzy.
+     */
+    RTE_FLOW_ITEM_TYPE_FUZZY = 19;
+
+    /**
+     * Matches a GTP header.
+     *
+     * Configure flow for GTP packets.
+     *
+     * See message rte_flow_item_gtp.
+     */
+    RTE_FLOW_ITEM_TYPE_GTP = 20;
+
+    /**
+     * Matches a GTP header.
+     *
+     * Configure flow for GTP-C packets.
+     *
+     * See message rte_flow_item_gtp.
+     */
+    RTE_FLOW_ITEM_TYPE_GTPC = 21;
+
+    /**
+     * Matches a GTP header.
+     *
+     * Configure flow for GTP-U packets.
+     *
+     * See message rte_flow_item_gtp.
+     */
+    RTE_FLOW_ITEM_TYPE_GTPU = 22;
+
+    /**
+     * Matches a ESP header.
+     *
+     * See message rte_flow_item_esp.
+     */
+    RTE_FLOW_ITEM_TYPE_ESP = 23;
+
+    /**
+     * Matches a GENEVE header.
+     *
+     * See message rte_flow_item_geneve.
+     */
+    RTE_FLOW_ITEM_TYPE_GENEVE = 24;
+
+    /**
+     * Matches a VXLAN-GPE header.
+     *
+     * See message rte_flow_item_vxlan_gpe.
+     */
+    RTE_FLOW_ITEM_TYPE_VXLAN_GPE = 25;
+
+    /**
+     * Matches an ARP header for Ethernet/IPv4.
+     *
+     * See message rte_flow_item_arp_eth_ipv4.
+     */
+    RTE_FLOW_ITEM_TYPE_ARP_ETH_IPV4 = 26;
+
+    /**
+     * Matches the presence of any IPv6 extension header.
+     *
+     * See message rte_flow_item_ipv6_ext.
+     */
+    RTE_FLOW_ITEM_TYPE_IPV6_EXT = 27;
+
+    /**
+     * Matches any ICMPv6 header.
+     *
+     * See message rte_flow_item_icmp6.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6 = 28;
+
+    /**
+     * Matches an ICMPv6 neighbor discovery solicitation.
+     *
+     * See message rte_flow_item_icmp6_nd_ns.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6_ND_NS = 29;
+
+    /**
+     * Matches an ICMPv6 neighbor discovery advertisement.
+     *
+     * See message rte_flow_item_icmp6_nd_na.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6_ND_NA = 30;
+
+    /**
+     * Matches the presence of any ICMPv6 neighbor discovery option.
+     *
+     * See message rte_flow_item_icmp6_nd_opt.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6_ND_OPT = 31;
+
+    /**
+     * Matches an ICMPv6 neighbor discovery source Ethernet link-layer
+     * address option.
+     *
+     * See message rte_flow_item_icmp6_nd_opt_sla_eth.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6_ND_OPT_SLA_ETH = 32;
+
+    /**
+     * Matches an ICMPv6 neighbor discovery target Ethernet link-layer
+     * address option.
+     *
+     * See message rte_flow_item_icmp6_nd_opt_tla_eth.
+     */
+    RTE_FLOW_ITEM_TYPE_ICMP6_ND_OPT_TLA_ETH = 33;
+
+    /**
+     * Matches specified mark field.
+     *
+     * See message rte_flow_item_mark.
+     */
+    RTE_FLOW_ITEM_TYPE_MARK = 34;
+
+    /**
+     * [META]
+     *
+     * Matches a metadata value.
+     *
+     * See message rte_flow_item_meta.
+     */
+    RTE_FLOW_ITEM_TYPE_META = 35;
+
+    /**
+     * Matches a GRE optional key field.
+     *
+     * The value should a big-endian 32bit integer.
+     *
+     * When this item present the K bit is implicitly matched as "1"
+     * in the default mask.
+     *
+     * @p spec/mask type:
+     * @code rte_be32_t * @endcode
+     */
+    RTE_FLOW_ITEM_TYPE_GRE_KEY = 36;
+
+    /**
+     * Matches a GTP extension header: PDU session container.
+     *
+     * Configure flow for GTP packets with extension header type 0x85.
+     *
+     * See message rte_flow_item_gtp_psc.
+     */
+    RTE_FLOW_ITEM_TYPE_GTP_PSC = 37;
+
+    /**
+     * Matches a PPPoE header.
+     *
+     * Configure flow for PPPoE session packets.
+     *
+     * See message rte_flow_item_pppoe.
+     */
+    RTE_FLOW_ITEM_TYPE_PPPOES = 38;
+
+    /**
+     * Matches a PPPoE header.
+     *
+     * Configure flow for PPPoE discovery packets.
+     *
+     * See message rte_flow_item_pppoe.
+     */
+    RTE_FLOW_ITEM_TYPE_PPPOED = 39;
+
+    /**
+     * Matches a PPPoE optional proto_id field.
+     *
+     * It only applies to PPPoE session packets.
+     *
+     * See message rte_flow_item_pppoe_proto_id.
+     */
+    RTE_FLOW_ITEM_TYPE_PPPOE_PROTO_ID = 40;
+
+    /**
+     * Matches Network service header (NSH).
+     * See message rte_flow_item_nsh.
+     *
+     */
+    RTE_FLOW_ITEM_TYPE_NSH = 41;
+
+    /**
+     * Matches Internet Group Management Protocol (IGMP).
+     * See message rte_flow_item_igmp.
+     *
+     */
+    RTE_FLOW_ITEM_TYPE_IGMP = 42;
+
+    /**
+     * Matches IP Authentication Header (AH).
+     * See message rte_flow_item_ah.
+     *
+     */
+    RTE_FLOW_ITEM_TYPE_AH = 43;
+
+    /**
+     * Matches a HIGIG header.
+     * see message rte_flow_item_higig2_hdr.
+     */
+    RTE_FLOW_ITEM_TYPE_HIGIG2 = 44;
+
+    /*
+     * [META]
+     *
+     * Matches a tag value.
+     *
+     * See message rte_flow_item_tag.
+     */
+    RTE_FLOW_ITEM_TYPE_TAG = 45;
+}
+
+
+enum rte_flow_action_type {
+/**
+	 * End marker for action lists. Prevents further processing of
+	 * actions, thereby ending the list.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_END = 0;
+
+	/**
+	 * Used as a placeholder for convenience. It is ignored and simply
+	 * discarded by PMDs.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_VOID = 1;
+
+	/**
+	 * Leaves traffic up for additional processing by subsequent flow
+	 * rules; makes a flow rule non-terminating.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_PASSTHRU = 2;
+
+	/**
+	 * RTE_FLOW_ACTION_TYPE_JUMP
+	 *
+	 * Redirects packets to a group on the current device.
+	 *
+	 * See struct rte_flow_action_jump.
+	 */
+	RTE_FLOW_ACTION_TYPE_JUMP = 3;
+
+	/**
+	 * Attaches an integer value to packets and sets RTE_MBUF_F_RX_FDIR and
+	 * RTE_MBUF_F_RX_FDIR_ID mbuf flags.
+	 *
+	 * See struct rte_flow_action_mark.
+	 *
+	 * One should negotiate mark delivery from the NIC to the PMD.
+	 * @see rte_eth_rx_metadata_negotiate()
+	 * @see RTE_ETH_RX_METADATA_USER_MARK
+	 */
+	RTE_FLOW_ACTION_TYPE_MARK = 4;
+
+	/**
+	 * Flags packets. Similar to MARK without a specific value; only
+	 * sets the RTE_MBUF_F_RX_FDIR mbuf flag.
+	 *
+	 * No associated configuration structure.
+	 *
+	 * One should negotiate flag delivery from the NIC to the PMD.
+	 * @see rte_eth_rx_metadata_negotiate()
+	 * @see RTE_ETH_RX_METADATA_USER_FLAG
+	 */
+	RTE_FLOW_ACTION_TYPE_FLAG = 5;
+
+	/**
+	 * Assigns packets to a given queue index.
+	 *
+	 * See struct rte_flow_action_queue.
+	 */
+	RTE_FLOW_ACTION_TYPE_QUEUE = 6;
+
+	/**
+	 * Drops packets.
+	 *
+	 * PASSTHRU overrides this action if both are specified.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_DROP = 7;
+
+	/**
+	 * Enables counters for this flow rule.
+	 *
+	 * These counters can be retrieved and reset through rte_flow_query() or
+	 * rte_flow_action_handle_query() if the action provided via handle,
+	 * see struct rte_flow_query_count.
+	 *
+	 * See struct rte_flow_action_count.
+	 */
+	RTE_FLOW_ACTION_TYPE_COUNT = 8;
+
+	/**
+	 * Similar to QUEUE, except RSS is additionally performed on packets
+	 * to spread them among several queues according to the provided
+	 * parameters.
+	 *
+	 * See struct rte_flow_action_rss.
+	 */
+	RTE_FLOW_ACTION_TYPE_RSS = 9;
+
+	/**
+	 * Traffic metering and policing (MTR).
+	 *
+	 * See struct rte_flow_action_meter.
+	 * See file rte_mtr.h for MTR object configuration.
+	 */
+	RTE_FLOW_ACTION_TYPE_METER = 13;
+
+	/**
+	 * Redirects packets to security engine of current device for security
+	 * processing as specified by security session.
+	 *
+	 * See struct rte_flow_action_security.
+	 */
+	RTE_FLOW_ACTION_TYPE_SECURITY = 14;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Implements OFPAT_DEC_NW_TTL ("decrement IP TTL") as defined by
+	 * the OpenFlow Switch Specification.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_DEC_NW_TTL = 15;
+
+	/**
+	 * Implements OFPAT_POP_VLAN ("pop the outer VLAN tag") as defined
+	 * by the OpenFlow Switch Specification.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_POP_VLAN = 16;
+
+	/**
+	 * Implements OFPAT_PUSH_VLAN ("push a new VLAN tag") as defined by
+	 * the OpenFlow Switch Specification.
+	 *
+	 * See struct rte_flow_action_of_push_vlan.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_PUSH_VLAN = 17;
+
+	/**
+	 * Implements OFPAT_SET_VLAN_VID ("set the 802.1q VLAN ID") as
+	 * defined by the OpenFlow Switch Specification.
+	 *
+	 * See struct rte_flow_action_of_set_vlan_vid.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_SET_VLAN_VID = 18;
+
+	/**
+	 * Implements OFPAT_SET_LAN_PCP ("set the 802.1q priority") as
+	 * defined by the OpenFlow Switch Specification.
+	 *
+	 * See struct rte_flow_action_of_set_vlan_pcp.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_SET_VLAN_PCP = 19;
+
+	/**
+	 * Implements OFPAT_POP_MPLS ("pop the outer MPLS tag") as defined
+	 * by the OpenFlow Switch Specification.
+	 *
+	 * See struct rte_flow_action_of_pop_mpls.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_POP_MPLS = 20;
+
+	/**
+	 * Implements OFPAT_PUSH_MPLS ("push a new MPLS tag") as defined by
+	 * the OpenFlow Switch Specification.
+	 *
+	 * See struct rte_flow_action_of_push_mpls.
+	 */
+	RTE_FLOW_ACTION_TYPE_OF_PUSH_MPLS = 21;
+
+	/**
+	 * Encapsulate flow in VXLAN tunnel as defined in
+	 * rte_flow_action_vxlan_encap action structure.
+	 *
+	 * See struct rte_flow_action_vxlan_encap.
+	 */
+	RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP = 22;
+
+	/**
+	 * Decapsulate outer most VXLAN tunnel from matched flow.
+	 *
+	 * If flow pattern does not define a valid VXLAN tunnel (as specified by
+	 * RFC7348) then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION
+	 * error.
+	 */
+	RTE_FLOW_ACTION_TYPE_VXLAN_DECAP = 23;
+
+	/**
+	 * Encapsulate flow in NVGRE tunnel defined in the
+	 * rte_flow_action_nvgre_encap action structure.
+	 *
+	 * See struct rte_flow_action_nvgre_encap.
+	 */
+	RTE_FLOW_ACTION_TYPE_NVGRE_ENCAP = 24;
+
+	/**
+	 * Decapsulate outer most NVGRE tunnel from matched flow.
+	 *
+	 * If flow pattern does not define a valid NVGRE tunnel (as specified by
+	 * RFC7637) then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION
+	 * error.
+	 */
+	RTE_FLOW_ACTION_TYPE_NVGRE_DECAP = 25;
+
+	/**
+	 * Add outer header whose template is provided in its data buffer
+	 *
+	 * See struct rte_flow_action_raw_encap.
+	 */
+	RTE_FLOW_ACTION_TYPE_RAW_ENCAP = 26;
+
+	/**
+	 * Remove outer header whose template is provided in its data buffer.
+	 *
+	 * See struct rte_flow_action_raw_decap
+	 */
+	RTE_FLOW_ACTION_TYPE_RAW_DECAP = 27;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv4 source address in the outermost IPv4 header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_ipv4.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV4_SRC = 28;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv4 destination address in the outermost IPv4 header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_ipv4.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV4_DST = 29;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv6 source address in the outermost IPv6 header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_ipv6.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV6_SRC = 30;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv6 destination address in the outermost IPv6 header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_ipv6.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV6_DST = 31;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify source port number in the outermost TCP/UDP header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_TCP
+	 * or RTE_FLOW_ITEM_TYPE_UDP, then the PMD should return a
+	 * RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_tp.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_TP_SRC = 32;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify destination port number in the outermost TCP/UDP header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_TCP
+	 * or RTE_FLOW_ITEM_TYPE_UDP, then the PMD should return a
+	 * RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_tp.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_TP_DST = 33;
+
+	/**
+	 * Swap the source and destination MAC addresses in the outermost
+	 * Ethernet header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_ETH,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_MAC_SWAP = 34;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Decrease TTL value directly
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_DEC_TTL = 35;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Set TTL value
+	 *
+	 * See struct rte_flow_action_set_ttl
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_TTL = 36;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Set source MAC address from matched flow.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_ETH,
+	 * the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_mac.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_MAC_SRC = 37;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Set destination MAC address from matched flow.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_ETH,
+	 * the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_mac.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_MAC_DST = 38;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Increase sequence number in the outermost TCP header.
+	 *
+	 * Action configuration specifies the value to increase
+	 * TCP sequence number as a big-endian 32 bit integer.
+	 *
+	 * @p conf type:
+	 * @code rte_be32_t * @endcode
+	 *
+	 * Using this action on non-matching traffic will result in
+	 * undefined behavior.
+	 */
+	RTE_FLOW_ACTION_TYPE_INC_TCP_SEQ = 39;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Decrease sequence number in the outermost TCP header.
+	 *
+	 * Action configuration specifies the value to decrease
+	 * TCP sequence number as a big-endian 32 bit integer.
+	 *
+	 * @p conf type:
+	 * @code rte_be32_t * @endcode
+	 *
+	 * Using this action on non-matching traffic will result in
+	 * undefined behavior.
+	 */
+	RTE_FLOW_ACTION_TYPE_DEC_TCP_SEQ = 40;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Increase acknowledgment number in the outermost TCP header.
+	 *
+	 * Action configuration specifies the value to increase
+	 * TCP acknowledgment number as a big-endian 32 bit integer.
+	 *
+	 * @p conf type:
+	 * @code rte_be32_t * @endcode
+
+	 * Using this action on non-matching traffic will result in
+	 * undefined behavior.
+	 */
+	RTE_FLOW_ACTION_TYPE_INC_TCP_ACK = 41;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Decrease acknowledgment number in the outermost TCP header.
+	 *
+	 * Action configuration specifies the value to decrease
+	 * TCP acknowledgment number as a big-endian 32 bit integer.
+	 *
+	 * @p conf type:
+	 * @code rte_be32_t * @endcode
+	 *
+	 * Using this action on non-matching traffic will result in
+	 * undefined behavior.
+	 */
+	RTE_FLOW_ACTION_TYPE_DEC_TCP_ACK = 42;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Set Tag.
+	 *
+	 * Tag is for internal flow usage only and
+	 * is not delivered to the application.
+	 *
+	 * See struct rte_flow_action_set_tag.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_TAG = 43;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Set metadata on ingress or egress path.
+	 *
+	 * See struct rte_flow_action_set_meta.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_META = 44;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv4 DSCP in the outermost IP header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_dscp.
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV4_DSCP = 45;
+
+	/**
+	 * @warning This is a legacy action.
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
+	 * Modify IPv6 DSCP in the outermost IP header.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
+	 * then the PMD should return a RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_set_dscp
+	 */
+	RTE_FLOW_ACTION_TYPE_SET_IPV6_DSCP = 46;
+
+	/**
+	 * Report as aged flow if timeout passed without any matching on the
+	 * flow.
+	 *
+	 * See struct rte_flow_action_age.
+	 * See function rte_flow_get_q_aged_flows
+	 * See function rte_flow_get_aged_flows
+	 * see enum RTE_ETH_EVENT_FLOW_AGED
+	 * See struct rte_flow_query_age
+	 * See struct rte_flow_update_age
+	 */
+	RTE_FLOW_ACTION_TYPE_AGE = 47;
+
+	/**
+	 * The matching packets will be duplicated with specified ratio and
+	 * applied with own set of actions with a fate action.
+	 *
+	 * See struct rte_flow_action_sample.
+	 */
+	RTE_FLOW_ACTION_TYPE_SAMPLE = 48;
+
+	/**
+	 * Modify a packet header field, tag, mark or metadata.
+	 *
+	 * Allow the modification of an arbitrary header field via
+	 * set, add and sub operations or copying its content into
+	 * tag, meta or mark for future processing.
+	 *
+	 * See struct rte_flow_action_modify_field.
+	 */
+	RTE_FLOW_ACTION_TYPE_MODIFY_FIELD = 50;
+
+	/**
+	 * An action handle is referenced in a rule through an indirect action.
+	 *
+	 * The same action handle may be used in multiple rules for the same
+	 * or different ethdev ports.
+	 */
+	RTE_FLOW_ACTION_TYPE_INDIRECT = 51;
+
+	/**
+	 * [META]
+	 *
+	 * Enable tracking a TCP connection state.
+	 *
+	 * @see struct rte_flow_action_conntrack.
+	 */
+	RTE_FLOW_ACTION_TYPE_CONNTRACK = 52;
+
+	/**
+	 * Color the packet to reflect the meter color result.
+	 * Set the meter color in the mbuf to the selected color.
+	 *
+	 * See struct rte_flow_action_meter_color.
+	 */
+	RTE_FLOW_ACTION_TYPE_METER_COLOR = 53;
+
+	/**
+	 * At embedded switch level, sends matching traffic to the given ethdev.
+	 *
+	 * @see struct rte_flow_action_ethdev
+	 */
+	RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR = 54;
+
+	/**
+	 * At embedded switch level, send matching traffic to
+	 * the entity represented by the given ethdev.
+	 *
+	 * @see struct rte_flow_action_ethdev
+	 */
+	RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT = 55;
+}

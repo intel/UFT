@@ -2,7 +2,7 @@
 # Copyright(c) 2021 Intel Corporation
 
 
-FROM registry.access.redhat.com/ubi8/ubi:8.4
+FROM registry.access.redhat.com/ubi8/ubi:8.4 as build
 
 ARG DPDK_TAG=main
 ENV DPDK_TAG=${DPDK_TAG}
@@ -19,18 +19,18 @@ RUN yum -y install gcc-c++ \
 WORKDIR /tmp/
 RUN git clone --progress http://dpdk.org/git/dpdk /tmp/dpdk
 #COPY ./dpdk /tmp/dpdk
-RUN git clone --progress https://github.com/ninja-build/ninja /opt/ninja
-RUN git -C /opt/ninja checkout v1.10.2
-RUN git clone --progress https://github.com/numactl/numactl.git /opt/numactl
-RUN git -C /opt/numactl checkout v2.0.14
+RUN git clone --progress https://github.com/ninja-build/ninja /opt/ninja &&\
+    git -C /opt/ninja checkout v1.10.2 &&\
+    git clone --progress https://github.com/numactl/numactl.git /opt/numactl &&\
+    git -C /opt/numactl checkout v2.0.14
 
 WORKDIR /opt/ninja
 RUN python3 configure.py --bootstrap && cp ninja /usr/bin/
 
 WORKDIR /opt/numactl
-RUN ./autogen.sh
-RUN ./configure --disable-dependency-tracking
-RUN make && make install
+RUN ./autogen.sh &&\
+    ./configure --disable-dependency-tracking &&\
+    make && make install
 
 WORKDIR /tmp/dpdk
 RUN git checkout ${DPDK_TAG}
@@ -45,34 +45,36 @@ net/hns3,net/ipn3ke,net/liquidio,net/mlx4,net/mvpp2,net/octeontx2,net/qede,net/s
     -Ddefault_library=shared \
     -Dmachine=default \
     -Dper_library_versions=false \
-	&& DESTDIR=`pwd`/install ninja -C /tmp/dpdk/dpdk-build install \
+	&& DESTDIR=$(pwd)/install ninja -C /tmp/dpdk/dpdk-build install \
         && ldconfig
+
+RUN pip3  --no-cache-dir install meson --upgrade
 
 WORKDIR /
 COPY ./ /opt/dcf
 
-WORKDIR /opt/dcf/lib
-RUN python3 setup.py build_ext --inplace --dpdkinc=/tmp/dpdk/install/usr/local/include --dpdklib=/tmp/dpdk/install/usr/local/lib64 --dpdkver=${DPDK_TAG}
-
+WORKDIR /opt/dcf
+RUN rm -f meson_options.txt \
+	&& echo "option('lib_ver', type:'string',value:'${DPDK_TAG}', description:'the version of dpdk')" >> meson_options.txt \
+	&& echo "option('lib_dirs', type:'string',value:'/tmp/dpdk/install/usr/local/lib64', description:'the library path of dpdk')" >> meson_options.txt \
+	&& echo "option('inc_dirs', type:'string',value:'/tmp/dpdk/install/usr/local/include', description:'the include path of dpdk')" >>  meson_options.txt \
+	&& rm -rf build lib/build rpc/build && meson build && rm -rf build lib/build rpc/build
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4
 
 ARG UFT_INSTALL_PATH=/usr/local/lib64
 ENV LD_LIBRARY_PATH=${UFT_INSTALL_PATH}:
 
-COPY --from=0 /tmp/dpdk/install/usr/local/lib64 ${UFT_INSTALL_PATH}
-COPY --from=0 /opt/dcf /opt/dcf
-COPY --from=0 /usr/local/lib/libnuma.so.1 ${UFT_INSTALL_PATH}
+COPY --from=build /tmp/dpdk/install/usr/local/lib64 ${UFT_INSTALL_PATH}
+COPY --from=build /opt/dcf /opt/dcf
+COPY --from=build /usr/local/lib/libnuma.so.1 ${UFT_INSTALL_PATH}
 
-RUN microdnf install python36-3.6.8 \
-	&& python3 -m pip install --upgrade --force pip \
-	&& pip3 install --no-cache-dir grpcio-tools grpcio-reflection pyyaml \
+RUN microdnf -y install python36-3.6.8 \
+	&& python3 -m pip install  --no-cache-dir --upgrade --force pip \
+	&& pip3 install  --no-cache-dir grpcio-tools grpcio-reflection pyyaml \
 	&& microdnf update libxml2 lz4-libs rpm systemd-libs \
-	glib2
-
-WORKDIR /opt/dcf/rpc
-RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. flow.proto
-RUN python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. qos.proto
+	glib2 \
+        && microdnf clean all
 
 WORKDIR /opt/dcf
 COPY ./images/entrypoint.sh /

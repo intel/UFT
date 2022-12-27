@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DPDK_NAME = dpdk-shared-lib
-DPDK_TAG = v22.07
-IMAGE_NAME = ${DPDK_NAME}:${DPDK_TAG}
+DPDK_TAG = v22.11
 DCF_NAME = uft
 DCF_IMAGE_NAME = ${DCF_NAME}:${DPDK_TAG}
-
 # To pass proxy for docker build from env invoke make with make image-<IMAGE> HTTP_PROXY=$http_proxy HTTPs_PROXY=$https_proxy
 DOCKERARGS?=
 ifdef http_proxy

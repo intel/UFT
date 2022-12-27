@@ -60,6 +60,24 @@ def rte_eth_dev_close(port_id):
         print("Except: {}".format(e))
     print("close port %d" %port_id)
 
+def rte_version_year():
+    return clibdpdk.rte_version_year()
+
+def rte_version_month():
+    return clibdpdk.rte_version_month()
+
+def rte_eth_dev_get_port_by_name(name):
+    cdef:
+        unsigned short port_id
+        int c_ret
+        char *c_name
+    c_name = name
+    c_ret = clibdpdk.rte_eth_dev_get_port_by_name(c_name, &port_id)
+    if c_ret != 0:
+        raise Exception("Can not get the port of %s c_ret = %d" % (name, c_ret))
+
+    return port_id
+
 # return < 0: error occur and raise error message.
 def rte_flow_validate(port_id, attr, patterns, actions):
     cdef:
@@ -335,8 +353,12 @@ mapping = {
     "list_rte_flow_action": Py2CListFlowActionConvertor(),
     "rte_flow_action": Py2CFlowActionConvertor(),
     "rte_flow_action_count": Py2CFlowActionCountConvertor(),
-    "rte_flow_action_vf": Py2CFlowActionVfConvertor(),
 }
+
+IF DPDK_VERSION == "v22.11":
+    mapping["rte_flow_action_ethdev"] = Py2CFlowActionEthdevConvertor()
+ELSE:
+    mapping["rte_flow_action_vf"] =  Py2CFlowActionVfConvertor()
 
 #Abstract Class for Py2C convertor
 cdef class Py2CConvertor:
@@ -699,35 +721,59 @@ cdef class Py2CFlowActionCountConvertor(Py2CConvertor):
             print("free action count conf")
             free(c_obj)
 
+IF DPDK_VERSION == "v22.11":
+    cdef class Py2CFlowActionEthdevConvertor(Py2CConvertor):
+        cdef void* convert(self, pyObj, convert_dict={}, void* reserved=NULL):
+            cdef:
+                clibdpdk.rte_flow_action_ethdev *c_ethdev
 
-cdef class Py2CFlowActionVfConvertor(Py2CConvertor):
-    cdef void* convert(self, pyObj, convert_dict={}, void* reserved=NULL):
-        cdef:
-            clibdpdk.rte_flow_action_vf *c_vf
+            if pyObj is None:
+                return NULL
+            if reserved == NULL:
+                c_ethdev = <clibdpdk.rte_flow_action_ethdev *>malloc(sizeof(clibdpdk.rte_flow_action_ethdev))
+                if not c_ethdev:
+                    raise MemoryError("No free memory")
+            else:
+                c_ethdev = <clibdpdk.rte_flow_action_ethdev *>reserved
 
-        if pyObj is None:
-            return NULL
+            c_ethdev.port_id = pyObj.port_id
 
-        print(pyObj)
-        if reserved == NULL:
-            c_vf = <clibdpdk.rte_flow_action_vf *>malloc(sizeof(clibdpdk.rte_flow_action_vf))
-            if not c_vf:
-                raise MemoryError("No free memory")
-        else:
-            c_vf = <clibdpdk.rte_flow_action_vf *>reserved
+            print("Action ethdev: ", c_ethdev[0])
 
-        c_vf.reserved = pyObj.reserved
-        c_vf.original = pyObj.original
-        c_vf.id = pyObj.id
-        print("Action vf: ", c_vf[0])
+            return <void*>c_ethdev
 
-        return <void*>c_vf
+        cdef void free_obj(self, void* c_obj, pyObj, convert_dict={}, void* reserved=NULL):
+            if reserved == NULL:
+                print("free action ethdev conf")
+                free(c_obj)
+ELSE:
+    cdef class Py2CFlowActionVfConvertor(Py2CConvertor):
+        cdef void* convert(self, pyObj, convert_dict={}, void* reserved=NULL):
+            cdef:
+                clibdpdk.rte_flow_action_vf *c_vf
 
-    cdef void free_obj(self, void* c_obj, pyObj, convert_dict={}, void* reserved=NULL):
-        if reserved == NULL:
-            print("free action vf conf")
-            free(c_obj)
+            if pyObj is None:
+                return NULL
 
+            print(pyObj)
+            if reserved == NULL:
+                c_vf = <clibdpdk.rte_flow_action_vf *>malloc(sizeof(clibdpdk.rte_flow_action_vf))
+                if not c_vf:
+                    raise MemoryError("No free memory")
+            else:
+                c_vf = <clibdpdk.rte_flow_action_vf *>reserved
+
+            c_vf.reserved = pyObj.reserved
+            c_vf.original = pyObj.original
+            c_vf.id = pyObj.id
+            print("Action vf: ", c_vf[0])
+
+            return <void*>c_vf
+
+        cdef void free_obj(self, void* c_obj, pyObj, convert_dict={}, void* reserved=NULL):
+            if reserved == NULL:
+                print("free action vf conf")
+                free(c_obj)
 
 cdef void* py2c_convert(pyObj, convert_dict={}, void* reserved=NULL):
     cdef void* ret = NULL
@@ -855,7 +901,7 @@ class RetryPolicy:
     def set_policy(self, interval, limit):
         self.__interval = interval
         self.__limit = limit
-        print('set interval = %d limit = %d' %(self.__interval, self.__limit))
+        print('set interval = %d limit = %d' % (self.__interval, self.__limit))
 
     def can_retry(self):
         self.__failures += 1
@@ -864,7 +910,7 @@ class RetryPolicy:
             clibdpdk.per_lcore__rte_errno = 0
             self.__fail_busy += 1
             time.sleep(self.__interval / 1000)
-            print('fails %d times fail_busy = %d' %(self.__failures, self.__fail_busy))
+            print('fails %d times fail_busy = %d' % (self.__failures, self.__fail_busy))
         return res
 
     def get_limit(self):

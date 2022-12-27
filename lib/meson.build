@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pyx_src = files('wrapper.pyx')
+lib_ver = get_option('lib_ver')
+lib_dirs = get_option('lib_dirs')
+inc_dirs = get_option('inc_dirs')
 
-setup = find_program('./setup.py')
+comm_struct_version = 'comm_struct_version.py'
+pxd_version = 'clibdpdk_version.pxd'
 
-custom_target('umd_wr',
-  input: pyx_src,
-  output: 'umd_pyx',
-  command : [setup, 'build_ext',
-            '-t' + meson.current_build_dir(),
-            '-b' + meson.current_source_dir()],
-  build_by_default : true
-)
+run_command('unlink', comm_struct_version, check:false)
+run_command('ln', '-s', 'comm_struct_' + lib_ver + '.py', comm_struct_version, check:true)
 
-configure_file(input: 'wrapper.pyx', output: 'wrapper.pyx', copy: true)
+run_command('unlink', pxd_version, check:false)
+run_command('ln', '-s', 'clibdpdk_' + lib_ver + '.pxd', pxd_version, check:true)
+
+cmd = ['python3', 'setup.py', 'build_ext', '--inplace', '--dpdkver=' + lib_ver, '--dpdklib=' + lib_dirs, '--dpdkinc=' + inc_dirs]
+run_command(cmd, check:true)
