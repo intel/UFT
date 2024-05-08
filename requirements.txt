@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-grpcio_reflection==1.53.0
-grpcio==1.53.0
-grpcio-tools==1.53.0
+grpcio_reflection==1.53.2
+grpcio==1.53.2
+grpcio-tools==1.53.2
 Cython==0.29.30
 PyYAML==5.4.1
 meson>=0.61.5
